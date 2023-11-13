@@ -1,0 +1,747 @@
+---
+title: "R analysis" 
+        
+        
+author: 'Youdeep Singh'
+subtitle: Statistical Techniques
+output: html_document
+---
+
+
+# Index 
+
+
+1. Introduction
+
+2. Case Study I  
+   
+   2.1.  Get The Data
+   
+   2.2.  What The Data Shows
+   
+   2.3.  Data Limitation and Assumption
+   
+   2.4.  T-Test 
+
+3. Case Study II 
+
+   3.1.  Get The Data 
+   
+   3.2.  What The Data 
+   
+   3.3.  Data Limitation and Assumption
+   
+   3.4.  Wilcoxon Signed-Rank Test
+   
+4. Case Study III
+   
+   4.1.  Get The Data
+   
+   4.2.  What The Data Shows
+   
+   4.3.  Data Limitation and Assumption
+   
+   4.4.  Kruskal-Wallis Test
+
+5. Case Study IV
+   
+   5.1.  Get The Data
+   
+   5.2.  Subset The Data
+   
+   5.3.  Data Limitation and Assumption
+   
+   5.4.  Linear Regression Analysis
+   
+   5.5.  Prediction
+   
+6. Case Study V
+   
+   6.1.  Get The Data
+   
+   6.2.  What The Data Shows
+   
+   6.3.  Data Limitation and Assumption
+   
+   6.4.  Multi-Linear Regression
+
+7. Case Study VI
+
+   7.1.  Get The Data
+   
+   7.2.  What The Data Shows
+   
+   7.3.  Data Limitation and Assumption
+   
+   7.4.  Chi-Square Test
+
+8. Summary
+
+9. References
+
+
+--- 
+
+
+
+
+
+# 1.  Introduction
+
+Statistics is an essential component of data analytics because it supplies the tools and methods for gathering, analyzing, and interpreting data.
+
+
+This article will focus on multiple case studies to showcase different statistics techniques  and key statistical concepts in analysis of data of different types.
+
+Each Case Study uses different statistical test to answer a hypothesis or relevant questions. 
+
+
+
+
+
+---
+
+
+# 2.  Case Study I
+
+
+Range anxiety is a major issue for those who wants to own an electric vehicle. The range anxiety of EV drivers has helped propel the industry forward. This case study will examine the electric range of EV in USA.
+
+
+Null Hypothesis (Ho) is that average Electric Range of electric cars with Model Year starting from 2018 to 2023 is 250 miles in USA. To test such a claim, T-test is used (after checking for normality and assumptions) with a confidence level of 95%. 
+
+Ho: x = 250 
+
+Ha: x ≠ 250
+
+
+The data set has been filtered to only select EV cars only and no hybrids. Filtered data leaves us with 28268 observation. Instead of original 109027 observation.
+
+
+
+## 2.1. Get The data 
+
+
+Database selected is Electric Vehicle Population Data. 
+This data set covers the Battery Electric Vehicles (BEVs) and Plug-in Hybrid Electric Vehicles (PHEVs) that are currently registered via Washington State Department of Licensing (DOL) (Data.gov, 2022).
+
+
+Loading necessary libraries and data:
+
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+
+```{r echo=FALSE}
+Electric_cars <- read.csv("Electric_Vehicle_Population_Data.csv")
+```
+
+
+
+
+## 2.2. What The Data Shows
+
+There are 17 fields/variables in the data, but only fields relevant for the analysis are:
+
+* Model
+* Electric.Vehicle.Type
+* Clean.Alternative.Fuel.Vehicle..CAFV..Eligibility
+* Range
+
+
+
+```{r}
+names(Electric_cars)
+```
+
+
+
+## 2.3. Data Limitation and Assumption
+
+
+As the dataset size is too large, Normality test is difficult to conduct. Shapiro-Wilk test require data size to be between 3-5000, while current data size is 28268.
+
+Data doesn't have any values for the year 2022 and 2023, also the result of selecting only EV cars reduces the data significantly.
+` `  
+
+Subset the data into new data frame named 'Electric_cars_2018_to_2023' to perform the test.
+
+
+```{r echo=FALSE}
+Electric_cars_2018_to_2023 <- Electric_cars %>% 
+  filter(Model.Year %in% c(2018,2019,2020,2021,2022,2023), Electric.Vehicle.Type == 'Battery Electric Vehicle (BEV)', 
+         Clean.Alternative.Fuel.Vehicle..CAFV..Eligibility == 'Clean Alternative Fuel Vehicle Eligible')
+
+```
+
+
+
+```{r echo=FALSE}
+Electric_cars_2018_to_2023 %>% ggplot(aes(x = Electric.Range, fill = 'Number of Cars')) + 
+  geom_histogram(bins = 10, binwidth = 50, color = 'pink', show.legend = FALSE) + facet_wrap(~Model.Year) +
+  labs(x = 'Electric Range', y = 'Number of Cars', title = 'Electric Cars Registered & \nRange From 2018-2023') +
+  theme_grey()
+
+```
+` `  
+The histogram demonstrates that the data for each year is regularly distributed ("bell-shaped curve"). Which contributes to the choice of the parametric test (T-test).
+
+
+## 2.4. T-Test
+
+Looking at summary of Electric Range which is continuous data.
+
+
+```{r echo=FALSE}
+summary(Electric_cars_2018_to_2023['Electric.Range'])
+```
+
+
+Doing the test and it's interpretation:
+
+
+```{r echo=FALSE}
+t.test(Electric_cars_2018_to_2023['Electric.Range'], conf.level = .95, mu = 250)
+```
+
+
+As the p-value/alpha level is very low and less than significance level of 0.05, null hypothesis is rejected in favor of alternate hypothesis. The average range for electric cars in US is not 250.
+
+
+
+---
+
+
+# 3.  Case Study II
+
+
+Carbon dioxide (CO2) is a gas that traps heat in the atmosphere and contributes to climate change and global warming. Therefore, lowering emissions of carbon dioxide is essential for solving the climate issue and fostering sustainable growth.
+
+
+CO2 emissions (metric tons per capita) is the data selected for testing any significant change in emissions level from 2018 to 2019 for all the countries.
+
+
+Null Hypothesis (Ho) is that there is no significant change in emissions over a one year period (2018 to 2019). Alternative hypothesis refute that claim. To test such a claim, Wilcoxon Signed-Rank Test is used with a confidence level of 95%.
+
+
+Ho -> 2018 = 2019 
+
+Ha -> 2018 ≠ 2019
+
+
+
+
+## 3.1. Get The Data 
+
+
+Data is obtained from World Bank Group (The World Bank, 2010). There are 266 observation, each observation represents a country. 65 fields/variables which represent emissions of C02 for the specific year.
+Fields/variables chosen (filtered):
+
+* Country.Name
+* X2018
+* X2019
+
+
+```{r echo=FALSE}
+Global_EM_Per_Cap <- read.csv('Global EM.csv', header = T)[-5]
+
+```
+
+
+
+## 3.2. What The Data Shows
+
+```{r echo=FALSE}
+boxplot(Global_EM_Per_Cap$X2018, Global_EM_Per_Cap$X2019, data = Global_EM_Per_Cap,
+         main="Global Emissions in 2018 & 2019", xlab="", ylab="Emissions", 
+        col=(c("gold","darkgreen")), names = c(2018,2019))
+
+```
+
+ 
+  
+## 3.3. Data Limitation and Assumption
+
+Due to the fact that the data does not fulfill the underlying requirements, non-parametric test, which also serve as an alternative to parametric test, are employed.
+
+
+```{r echo=FALSE}
+shapiro.test(Global_EM_Per_Cap$X2018)
+shapiro.test(Global_EM_Per_Cap$X2019)
+```
+
+As the P-value is extremely tiny (> 0.5%), it indicates that the data are not normally distributed. Wilcoxon Signed-Rank Test is used in place of Paired T-test.
+
+
+
+## 3.4. Wilcoxon Signed-Rank Test
+
+Doing the test and it's interpretation:
+
+ 
+```{r echo=FALSE}
+wilcox.test(Global_EM_Per_Cap$X2018, Global_EM_Per_Cap$X2019, paired = TRUE, conf.level = 0.95)
+```
+
+As the p-value/alpha level is more than significance level of 0.05, null hypothesis is accepted. There is no significant change in Emissions from 2018 to 2019.
+
+
+
+---
+
+
+
+
+# 4.  Case Study III
+
+
+There is unclear relationship between racial background and criminal behavior. This statistical test will look at arrests data from Gov.UK for the period of 2020/21 (www.ethnicity-facts-figures.service.gov.uk, n.d.). The data selected is only of certain minority groups out of all the ethic background from England & Wales.
+
+
+Null Hypothesis (Ho) is that the means of the different ethnic groups is equal. Alternative hypothesis(Ha) refute that claim. To test such a claim, Kruskal-Wallis test is used with a confidence level of 95%.
+
+
+Ho = Means is equal for people of Asian ethnicity in all geography of England and Wales.
+
+Ha ≠ Means is not equal for people of Asian ethnicity in all geography of England and Wales.
+
+
+
+
+## 4.1. Get the data 
+
+
+The data has 78120 observations with 17 variables. 'Ethnicity' selected for the analysis: 
+
+* Pakistani
+* Indian
+* Chinese
+* Bangladeshi
+* Any Other Asian Background
+
+
+```{r echo=FALSE}
+Arrests_Data <- read.csv('arrests-data-march-2018-to-march-2021.csv')
+```
+
+
+
+```{r echo=FALSE}
+names(Arrests_Data)
+```
+
+
+
+
+## 4.2. What The Data Shows
+
+The total number of arrests of people of Asian background is 44,352 in 2020/2021, for all geography in England and Wales. While the total number of arrests for the year was 646,292.
+
+
+
+```{r echo=FALSE}
+Asian_Arrests <- Arrests_Data %>% drop_na(Number.of.arrests) %>% 
+  filter(Ethnicity %in% c('Bangladeshi', 'Chinese', 'Indian', 
+                          'Pakistani', 'Any Other Asian Background'), 
+         Time == '2020/21',Gender == 'All', Age_Group == 'All', 
+         !(Geography %in% c('All', 'All - excluding Lancashire')))
+
+```
+
+
+
+```{r echo=FALSE, warning=FALSE}
+Asian_Arrests %>% ggplot(aes(y = Ethnicity, x = Number.of.arrests)) + 
+  geom_boxplot(color = 'dark blue')  +
+  scale_x_log10() + theme_classic() + 
+  labs(x = 'Number of Arrests', y = 'Ethnicity', title = 'Ethnic Minoirty Arrests in 2020/21')
+
+```
+
+
+
+
+## 4.3. Data Limitation and Assumption
+
+
+Given that the points on the QQ plot of residuals do not lie along the reference line, it is reasonable to conclude that the data is not normally distributed.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(ggpubr)
+```
+```{r echo=FALSE,  warning=FALSE}
+model  <- lm(Number.of.arrests ~ Ethnicity, data = Asian_Arrests)
+ggqqplot(residuals(model))
+```
+
+
+
+## 4.4. Kruskal-Wallis Test
+
+As the Anova test's assumptions are not satisfied. The Kruskal-Wallis Test, a nonparametric alternative, is applied.
+
+
+```{r echo=FALSE}
+kruskal.test(Number.of.arrests ~ Ethnicity, data = Asian_Arrests)
+```
+
+The P-value is less than significance level 0.05. The Null hypothesis (Ho) can be rejected for alternative hypothesis, therefore there are significant difference between the groups.
+
+
+
+Difference between the ethnicity: 
+
+```{r echo=FALSE, warning=FALSE}
+pairwise.wilcox.test(Asian_Arrests$Number.of.arrests, Asian_Arrests$Ethnicity,
+                     p.adjust.method = "BH")
+```
+
+The pairwise comparison shows which ethnicity are different from one-another. When P < 0.05, the groups are significantly different.
+
+
+
+
+---
+
+
+
+
+# 5.  Case Study IV
+
+
+Crime and Incarceration in the United States, State and Federal prisoner population figures published by Bureau of Justice Statistics (www.kaggle.com, n.d.).
+
+This study will go over Regression analysis to estimate the relationships among variables and to make predictions based on those relationships.
+
+The data represents different crime stats over the period of 2001 to 2016 for all the states in USA. For simplicity only 'New York' is selected for analysis to evaluate the relationship between prisoner count and state population. 
+
+Null hypothesis (Ho) =  No relationship between state population and prisoner count. 
+
+Alternative Hypothesis (Ha) = There is some relationship between state population and prisoner count.
+
+Confidence level is set to be 95%.
+
+
+
+## 5.1. Get The Data
+
+The data set has 816 observations and 17 variables/fields. 
+
+
+```{r echo=FALSE}
+crime <- read.csv('crime_and_incarceration_by_state.csv')
+```
+
+
+
+
+## 5.2. Subset The Data
+
+
+As the data shows there is a negative correlation between the two variables. As the population has increased, number of prisoners in the state of New York has gone down.
+
+```{r echo=FALSE, warning=FALSE}
+crime %>%  filter(jurisdiction == 'NEW YORK') %>% ggplot(aes(state_population, prisoner_count)) + 
+  geom_point(color = 'darkred') + theme_minimal() +
+  stat_smooth(method = lm) + ggtitle('Change in Prisoner Count and Population in
+       New York From 2001-2016') + labs(y = 'Prisoner Count', x = 'State Population')
+```
+
+
+
+```{r echo=FALSE}
+Reg <- crime %>% filter(jurisdiction == 'NEW YORK') %>% select(state_population, prisoner_count)
+
+```
+
+
+
+## 5.3. Data Assumption and Limitations
+
+Plotting 'QQ Plot of Residuals' to visually check normality assumption:
+
+```{r echo=FALSE}
+Reg_analysis <- lm(prisoner_count ~ state_population, data = Reg)  
+
+plot(Reg_analysis, 2)
+```
+
+As majority of all points fall along reference line, it is assumed data is normally distributed.
+
+
+
+Linearity of data:
+
+```{r echo=FALSE}
+plot(Reg_analysis, 1)
+```
+
+The residual plot has no trend. This shows that a linear connection between predictors and outcome variables may be assumed.
+
+
+
+
+## 5.4. Linear Regression Analysis
+ 
+
+```{r echo=FALSE}
+summary(Reg_analysis)
+```
+
+The test shows p-value is very small and less than significance level than of 0.05. So, null hypothesis can be rejected in favor of the alternative hypothesis. As the above figure shows there is an inverse relationship between the variables.
+
+
+
+
+## 5.5. Prediction
+
+
+Using the regression model from above, the value of dependent variable can be predicted. A new data frame is created with population value of 20 Million.
+
+```{r}
+new <- data.frame(state_population = 20000000)
+predict(Reg_analysis, new, interval = 'predict')
+```
+
+The prediction shows if the state population is 20 million, the possible prisoner count will be 45849. The test also provides upper and lower interval where the value of the prediction might exists. 
+
+
+---
+
+
+
+# 6.  Case Study V
+
+
+Using the same data set from Case Study IV (crime). This study will test relationship between different variables in state of New York from 2001 to 2016:
+
+* murder_manslaughter 
+* rape_legacy
+* robbery 
+* agg_assault
+
+Multiple linear regression model is the most suitable for the scenario. 
+
+
+## 6.1. Get the data 
+
+The data set is the same as above, there are 17 variables which are as follows:
+
+```{r echo=FALSE}
+names(crime)
+```
+
+
+
+## 6.2. What The Data Shows
+
+
+Relationship between different categories in New York from 2001 to 2016.
+
+```{r echo=FALSE}
+crime %>% filter(jurisdiction == 'NEW YORK') %>% select(murder_manslaughter, 
+                                          rape_legacy, robbery,
+                                        agg_assault) %>% plot()
+```
+
+
+As the figure shows, there is a relationship between 'murder_manslaughter' and 'robbery' in the state of New York.
+
+
+  
+## 6.3. Data Limitation and Assumption
+
+
+Testing linearity of the data:
+
+```{r echo=FALSE}
+New_data_subset <- crime %>% filter(jurisdiction == 'NEW YORK') %>% 
+  select(murder_manslaughter, rape_legacy, robbery, agg_assault)
+
+
+model <- lm(data = New_data_subset, murder_manslaughter ~ rape_legacy + robbery + agg_assault)
+
+plot(model,1)
+
+```
+
+As there is no apparent pattern around the horizontal line, it can be assumed data is linear.
+
+
+Testing normal distribution of residuals:
+
+```{r echo=FALSE}
+plot(model,2)
+```
+
+The Q-Q plot illustrates the normal distribution of the residuals, with the dots tending to align with the straight line.
+
+
+
+## 6.4. Multi Linear Regression
+
+
+Result and interpretation:
+
+
+```{r}
+summary(model)
+```
+
+As the results shows the p-value is 0.0004514, which translates to atleast one variable is significantly related to 'murder_manslaughter'. Triple stars next to 'robbery' indicates strong co-relation.
+
+
+
+```{r echo=FALSE}
+summary(model)$coefficient
+```
+
+
+The p-value or Pr(>|t|) of 'robbery' and 'murder_manslaughter' is less than 0.05, therefore there is relationship between these two variables and can be used for prediction.
+
+
+
+---
+
+
+
+
+# 7.  Case Study VI
+
+
+This case study will look at arrests data from Gov.UK for the period of 2020/21 (www.ethnicity-facts-figures.service.gov.uk, n.d.). To test whether one gender influence the other gender in criminal behavior.
+
+
+The data selected is only of 'White' minority out of all the ethic background from England & Wales.
+
+The test only focuses on 'Male' and 'Female' while ignoring other genders. To test such a claim Chi-square test is used with 95% level of confidence.
+
+Null hypothesis (H0): variables are independent.
+
+Alternative hypothesis (Ha): variables are dependent.
+
+
+
+
+
+## 7.1. Get The Data
+
+
+The data represents total number of arrests in England and Wales in year 2021 for 'Male' and 'Female' as per their age group of 'White' ethnicity. 
+
+
+
+```{r echo=FALSE}
+Female <- c(15556,	15313,	171854,	6,	36)
+
+Male <- c(75712, 84865, 895786, 3	,111)
+
+m  <- cbind(Female, Male)
+
+row.names(m) <- c('10 - 17 years',	'18 - 20 years', '21 years and over',	'Under 10 years',	'Unknown')
+
+colnames(m) <- c('Female', 'Male')
+
+library(knitr)
+
+```
+
+
+
+```{r echo=FALSE}
+kable(m[1:5,])
+```
+
+
+```{r echo=FALSE}
+New_table <- as.table(as.matrix(m))
+New_df <- as.data.frame(as.table(New_table))
+```
+
+
+
+
+## 7.2. What The Data Shows
+
+
+```{r echo=FALSE}
+ggplot(New_df , aes(x = Var2, y = Freq, fill = Var1)) + geom_bar(stat = 'identity', color = 'black') + 
+  facet_wrap(~Var1) + theme_light() + xlab("Gender") + ylab("Number of Arrests") + 
+  ggtitle("White Ethicity Arrests in \nFinancial Year 2020/21") + 
+  labs(fill = "Age Group")
+
+```
+
+
+
+## 7.3. Data Limitation and Assumption
+
+Data is too big to test assumptions of Chi-Square test. Correct method to test assumptions is also tricky and no clear result is present.
+
+
+
+
+## 7.4. Chi-Square Test
+
+
+The result shows the p-value of less than 0.05 which indicates a strong correlation and null hypothesis can be rejected in favor of alternative hypothesis. 
+
+
+```{r echo=FALSE}
+test <- chisq.test(New_table)
+test
+```
+
+
+
+A cell's residual is the difference between its observed and predicted values. The bigger the residual, the greater the cell's contribution to the size of the computed chi-square value (Sharpe, Donald (2015)).
+
+```{r}
+test$residuals
+```
+
+
+
+
+---
+
+
+# 8.  Summary
+
+The aforementioned Case Studies illustrate the application of statistical techniques to real-world data sets. This paper falls short to provide evidence for all test-related assumptions. The selection of the most appropriate statistical approach made after a thorough evaluation of the data. Checking for data homogeneity and dispersion proved to be difficult in cases where the data set is particularly large.
+
+Every case study lays-out the null hypothesis and alternative hypothesis and utilize a technique for evaluation. 
+
+
+
+
+---
+
+
+
+
+# 9.  References
+
+
+Data.gov. (2022). Electric Vehicle Population Data. [online] Available at: https://catalog.data.gov/dataset/electric-vehicle-population-data.
+
+
+The World Bank (2010). CO2 emissions (metric tons per capita) | Data. [online] Worldbank.org. Available at: https://data.worldbank.org/indicator/EN.ATM.CO2E.PC.
+
+
+www.ethnicity-facts-figures.service.gov.uk. (n.d.). Arrests. [online] Available at: https://www.ethnicity-facts-figures.service.gov.uk/crime-justice-and-the-law/policing/number-of-arrests/latest#download-the-data.
+
+
+www.kaggle.com. (n.d.). Crime and Incarceration in the United States. [online] Available at: https://www.kaggle.com/datasets/christophercorrea/prisoners-and-crime-in-united-states.
+
+
+Sharpe, Donald (2015). Your Chi-Square Test is Statistically Significant: Now What? Practical Assessment,
+Research & Evaluation, 20(8). Available online: http://pareonline.net/getvn.asp?v=20&n=8 
+
+
+
+
+
